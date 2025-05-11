@@ -1,0 +1,310 @@
+{
+  "version": "0.1.0",
+  "name": "str3am",
+  "instructions": [
+    {
+      "name": "initializePlatform",
+      "accounts": [
+        {
+          "name": "platform",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "feePercentage",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "uploadVideo",
+      "accounts": [
+        {
+          "name": "video",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "platform",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "uploader",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "cid",
+          "type": "string"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "category",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "payToWatch",
+      "accounts": [
+        {
+          "name": "video",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "platform",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "viewer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "access",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "viewerTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "uploaderTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "platformTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "updateVideo",
+      "accounts": [
+        {
+          "name": "video",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "uploader",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "description",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "price",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "category",
+          "type": {
+            "option": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "updateFeePercentage",
+      "accounts": [
+        {
+          "name": "platform",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "feePercentage",
+          "type": "u8"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "PlatformState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "feePercentage",
+            "type": "u8"
+          },
+          {
+            "name": "totalVideos",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Video",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "uploader",
+            "type": "publicKey"
+          },
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "cid",
+            "type": "string"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "category",
+            "type": "string"
+          },
+          {
+            "name": "viewCount",
+            "type": "u64"
+          },
+          {
+            "name": "creationTime",
+            "type": "i64"
+          },
+          {
+            "name": "videoId",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VideoAccess",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "viewer",
+            "type": "publicKey"
+          },
+          {
+            "name": "video",
+            "type": "publicKey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidFeePercentage",
+      "msg": "Fee percentage must be between 0 and 100"
+    },
+    {
+      "code": 6001,
+      "name": "TitleTooLong",
+      "msg": "Title cannot exceed 100 characters"
+    },
+    {
+      "code": 6002,
+      "name": "DescriptionTooLong",
+      "msg": "Description cannot exceed 500 characters"
+    },
+    {
+      "code": 6003,
+      "name": "CidTooLong",
+      "msg": "CID cannot exceed 100 characters"
+    },
+    {
+      "code": 6004,
+      "name": "CategoryTooLong",
+      "msg": "Category cannot exceed 50 characters"
+    },
+    {
+      "code": 6005,
+      "name": "UnauthorizedAccess",
+      "msg": "Unauthorized access"
+    }
+  ]
+} 

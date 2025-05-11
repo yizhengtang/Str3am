@@ -1,23 +1,38 @@
 {
   "name": "str3am",
   "version": "0.1.0",
-  "private": true,
+  "description": "Pay-per-view blockchain video streaming platform",
+  "main": "index.js",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "node backend/index.js",
+    "dev:backend": "nodemon backend/index.js",
+    "dev:frontend": "cd frontend && npm start",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "install:all": "npm install && cd frontend && npm install"
   },
+  "keywords": [
+    "solana",
+    "anchor",
+    "blockchain",
+    "video",
+    "streaming",
+    "pay-per-view"
+  ],
+  "author": "",
+  "license": "MIT",
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "next": "15.3.2"
+    "@project-serum/anchor": "^0.26.0",
+    "@solana/spl-token": "^0.3.8",
+    "@solana/web3.js": "^1.78.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "ipfs-http-client": "^56.0.3",
+    "mongoose": "^7.3.1",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "15.3.2",
-    "@eslint/eslintrc": "^3"
+    "concurrently": "^8.2.0",
+    "nodemon": "^2.0.22"
   }
 }

@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# STR3AM: Pay-Per-View Blockchain Video Platform
+
+STR3AM is a decentralized video streaming platform built on Solana blockchain that implements a pay-per-view model. Unlike traditional subscription-based platforms, STR3AM allows users to pay only for the content they actually watch.
+
+## Features
+
+- **Pay-Per-View Model**: Users pay tokens only for the videos they want to watch
+- **Decentralized Storage**: Videos are stored on IPFS for censorship resistance
+- **Creator Monetization**: Content creators earn tokens directly when users watch their videos
+- **Wallet Integration**: Seamless integration with Solana wallets (Phantom, Solflare, etc.)
+- **User Profiles**: Customizable profiles for creators and viewers
+- **Video Management**: Upload, categorize, and manage video content
+- **Video Player**: Custom video player with progress tracking
+- **Responsive Design**: Works on desktop and mobile devices
+
+## Technology Stack
+
+- **Frontend**: React, TailwindCSS, DaisyUI
+- **Backend**: Node.js, Express
+- **Blockchain**: Solana, Anchor Framework
+- **Database**: MongoDB
+- **Storage**: IPFS
+- **Authentication**: Solana Wallet Adapter
+
+## Architecture
+
+The application consists of three main components:
+
+1. **Solana Smart Contract (Anchor Program)**:
+   - Handles payment processing
+   - Stores video metadata on-chain
+   - Manages access control for videos
+
+2. **Backend API**:
+   - Interacts with the Solana blockchain
+   - Manages off-chain metadata
+   - Handles video uploads to IPFS
+   - Provides REST APIs for the frontend
+
+3. **Frontend Application**:
+   - User interface for browsing, watching, and uploading videos
+   - Wallet integration for payments
+   - Video player with access control
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js (v14+)
+- MongoDB
+- Solana CLI tools
+- Anchor Framework
+- IPFS node or Infura IPFS account
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/str3am.git
+   cd str3am
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm run install:all
+   ```
+
+3. Configure environment variables:
+   - Create a `.env` file in the root directory
+   - Add the following variables:
+     ```
+     PORT=5000
+     MONGO_URI=mongodb://localhost:27017/str3am
+     SOLANA_NETWORK=devnet
+     PROGRAM_ID=your_program_id
+     IPFS_PROJECT_ID=your_ipfs_project_id
+     IPFS_PROJECT_SECRET=your_ipfs_project_secret
+     ```
+
+4. Deploy the Anchor program:
+   ```bash
+   cd anchor
+   anchor deploy
+   ```
+
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## Usage
+
+1. Connect your Solana wallet
+2. Browse available videos
+3. Pay tokens to watch a video
+4. Upload your own videos and earn tokens
+
+## Project Structure
+
+```
+str3am/
+├── anchor/              # Solana smart contract code
+├── backend/             # Node.js backend
+│   ├── config/          # Configuration files
+│   ├── controllers/     # API controllers
+│   ├── models/          # Database models
+│   ├── routes/          # API routes
+│   └── middleware/      # Middleware functions
+├── frontend/            # React frontend
+│   ├── public/          # Static files
+│   └── src/             # Source code
+│       ├── components/  # React components
+│       ├── contexts/    # React contexts
+│       ├── pages/       # Page components
+│       └── utils/       # Utility functions
+└── README.md            # Project documentation
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Contributing
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+1. Fork the repository
+2. Create a feature branch: `git checkout -b my-new-feature`
+3. Commit your changes: `git commit -am 'Add some feature'`
+4. Push to the branch: `git push origin my-new-feature`
+5. Submit a pull request
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## License
 
-## Learn More
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-To learn more about Next.js, take a look at the following resources:
+## Acknowledgments
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Solana Foundation
+- Anchor Framework
+- IPFS
