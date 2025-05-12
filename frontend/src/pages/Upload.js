@@ -27,7 +27,7 @@ const Upload = () => {
   // Video dropzone configuration
   const { getRootProps: getVideoRootProps, getInputProps: getVideoInputProps } = useDropzone({
     accept: {
-      'video/*': ['.mp4', '.webm', '.ogg']
+      'video/*': ['.mp4', '.webm', '.ogg', '.mov']
     },
     maxFiles: 1,
     maxSize: 100 * 1024 * 1024, // 100MB
@@ -160,7 +160,7 @@ const Upload = () => {
       toast.success('Video uploaded successfully!');
       navigate(`/video/${response.data._id}`);
     } catch (error) {
-      console.error('Error uploading video:', error);
+      console.error('Error uploading video:', error, error.stack);
       toast.error(`Upload failed: ${error.message || 'Unknown error'}`);
     } finally {
       setIsUploading(false);
@@ -215,7 +215,7 @@ const Upload = () => {
                     <FaCloudUploadAlt className="text-gray-400 text-4xl mx-auto mb-2" />
                     <p className="text-white">Drag & drop your video here</p>
                     <p className="text-gray-400 text-sm">
-                      MP4, WebM or OGG (max. 100MB)
+                      MP4, WebM, OGG or MOV (max. 100MB)
                     </p>
                   </div>
                 )}
