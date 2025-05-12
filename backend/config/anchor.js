@@ -3,6 +3,8 @@ const { Program, AnchorProvider, Wallet } = require('@project-serum/anchor');
 const fs = require('fs');
 const path = require('path');
 const idl = require('./idl.json');
+const bs58 = require('bs58');
+const decode = bs58.decode ? bs58.decode : bs58.default.decode;
 
 // Load IDL from a local file
 // const idl = JSON.parse(
@@ -24,12 +26,19 @@ const connection = new Connection(
 let wallet;
 
 if (process.env.PAYER_PRIVATE_KEY) {
-  // Use private key
-  const payerSecretKey = Buffer.from(
-    process.env.PAYER_PRIVATE_KEY.split(',').map(Number)
-  );
+  let payerSecretKey;
+  if (process.env.PAYER_PRIVATE_KEY.includes(',')) {
+    // Array format
+    payerSecretKey = Buffer.from(
+      process.env.PAYER_PRIVATE_KEY.split(',').map(Number)
+    );
+  } else {
+    // Base58 format
+    payerSecretKey = decode(process.env.PAYER_PRIVATE_KEY);
+  }
   const payerKeypair = Keypair.fromSecretKey(payerSecretKey);
   wallet = new Wallet(payerKeypair);
+  console.log(`Wallet API connected successfully. Public key: ${payerKeypair.publicKey.toString()}`);
 } else {
   // Generate a new keypair
   const payerKeypair = Keypair.generate();
