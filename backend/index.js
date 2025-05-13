@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const videoRoutes = require('./routes/videoRoutes');
 const userRoutes = require('./routes/userRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const interactionRoutes = require('./routes/interactionRoutes');
+const commentRoutes = require('./routes/commentRoutes');
 
 // Set NODE_ENV to development if not specified
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
@@ -24,6 +26,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/videos', videoRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/interactions', interactionRoutes);
+app.use('/api/comments', commentRoutes);
 
 // Root route
 app.get('/', (req, res) => {

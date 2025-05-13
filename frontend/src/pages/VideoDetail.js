@@ -7,6 +7,8 @@ import { FaEye, FaUser, FaCalendarAlt, FaCoins } from 'react-icons/fa';
 
 import VideoPlayer from '../components/VideoPlayer';
 import PayToWatchModal from '../components/PayToWatchModal';
+import VideoInteractions from '../components/VideoInteractions';
+import Comments from '../components/Comments';
 import { getVideo, verifyAccess } from '../utils/api';
 import { getArweaveUrl } from '../utils/arweave';
 
@@ -170,7 +172,27 @@ const VideoDetail = () => {
                 <p className="text-gray-400 whitespace-pre-wrap">{video.description}</p>
               </div>
             </div>
+            
+            {/* Video Interactions (Like, Dislike, Share) */}
+            <VideoInteractions videoId={video._id} hasAccess={hasAccess} />
+            
+            <div className="border-t border-b border-gray-700 py-4 my-4">
+              {/* Video Owner Controls - REMOVED */}
+              {publicKey && publicKey.toString() === video.uploader && (
+                <div className="mt-8 p-4 bg-gray-800 rounded-lg">
+                  <h3 className="text-lg font-bold text-white mb-3">Creator Controls</h3>
+                  
+                  <p className="text-gray-400">
+                    Videos with a dislike ratio exceeding 80% and at least 100 interactions will be automatically taken down. 
+                    All users who paid for the video will be refunded.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
+          
+          {/* Comments Section */}
+          <Comments videoId={video._id} hasAccess={hasAccess} />
         </div>
         
         {/* Sidebar */}

@@ -37,6 +37,10 @@ const UserSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    tokensRefunded: {
+      type: Number,
+      default: 0
+    },
     socialLinks: {
       twitter: String,
       instagram: String,

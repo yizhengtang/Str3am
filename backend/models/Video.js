@@ -38,6 +38,42 @@ const VideoSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    // Social engagement metrics
+    likeCount: {
+      type: Number,
+      default: 0
+    },
+    dislikeCount: {
+      type: Number,
+      default: 0
+    },
+    commentCount: {
+      type: Number,
+      default: 0
+    },
+    shareCount: {
+      type: Number,
+      default: 0
+    },
+    // For automatic takedown feature
+    dislikeRatio: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 1
+    },
+    // Configurable threshold for auto-takedown (0.8 means 80% dislike ratio triggers takedown)
+    dislikeThreshold: {
+      type: Number,
+      default: 0.8,
+      min: 0,
+      max: 1
+    },
+    // Minimum number of interactions (likes+dislikes) before ratio is considered
+    minimumInteractions: {
+      type: Number,
+      default: 100
+    },
     uploader: {
       type: String, // Solana wallet address
       required: true,
@@ -56,6 +92,12 @@ const VideoSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+    // Track reason for takedown, if any
+    takedownReason: {
+      type: String,
+      enum: ['dislike_ratio', 'admin_action', 'uploader_removed', null],
+      default: null
     }
   },
   {
