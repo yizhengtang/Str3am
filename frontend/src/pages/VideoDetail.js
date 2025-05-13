@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
-import { FaEye, FaUser, FaCalendarAlt, FaCoins } from 'react-icons/fa';
+import { FaEye, FaUser, FaCalendarAlt, FaCoins, FaExclamationTriangle } from 'react-icons/fa';
 
 import VideoPlayer from '../components/VideoPlayer';
 import PayToWatchModal from '../components/PayToWatchModal';
 import VideoInteractions from '../components/VideoInteractions';
 import Comments from '../components/Comments';
-import { getVideo, verifyAccess } from '../utils/api';
+import { getVideo, verifyAccess, deleteVideo } from '../utils/api';
 import { getArweaveUrl } from '../utils/arweave';
 
 const VideoDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { publicKey } = useWallet();
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,7 @@ const VideoDetail = () => {
   const [hasAccess, setHasAccess] = useState(false);
   const [accessData, setAccessData] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [takingDown, setTakingDown] = useState(false);
   
   // Fetch video details
   useEffect(() => {
@@ -66,6 +68,40 @@ const VideoDetail = () => {
     setHasAccess(true);
     setAccessData({ accessPubkey });
     setShowPaymentModal(false);
+  };
+  
+  // Handle video takedown by creator
+  const handleTakedown = async () => {
+    if (!publicKey || publicKey.toString() !== video.uploader) {
+      toast.error('Only the video creator can take down this video');
+      return;
+    }
+    
+    if (!window.confirm('Are you sure you want to take down this video? All users who paid will be refunded. This action cannot be undone.')) {
+      return;
+    }
+    
+    setTakingDown(true);
+    
+    try {
+      const response = await deleteVideo(id, publicKey.toString());
+      
+      // Show success message with refund info if available
+      if (response.refunds) {
+        toast.success(`Video taken down successfully. ${response.refunds.refunded} users have been refunded.`);
+      } else {
+        toast.success('Video taken down successfully.');
+      }
+      
+      // Redirect to profile page after a short delay
+      setTimeout(() => {
+        navigate(`/profile/${publicKey.toString()}`);
+      }, 2000);
+    } catch (error) {
+      console.error('Error taking down video:', error);
+      toast.error('Failed to take down video. Please try again.');
+      setTakingDown(false);
+    }
   };
   
   // Format date
@@ -182,10 +218,19 @@ const VideoDetail = () => {
                 <div className="mt-8 p-4 bg-gray-800 rounded-lg">
                   <h3 className="text-lg font-bold text-white mb-3">Creator Controls</h3>
                   
-                  <p className="text-gray-400">
+                  <p className="text-gray-400 mb-4">
                     Videos with a dislike ratio exceeding 80% and at least 100 interactions will be automatically taken down. 
                     All users who paid for the video will be refunded.
                   </p>
+                  
+                  <button 
+                    onClick={handleTakedown}
+                    disabled={takingDown}
+                    className="flex items-center bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                  >
+                    <FaExclamationTriangle className="mr-2" />
+                    {takingDown ? 'Taking Down...' : 'Take Down Video'}
+                  </button>
                 </div>
               )}
             </div>

@@ -22,7 +22,11 @@ router.get('/:id', videoController.getVideo);
 router.get('/uploader/:walletAddress', videoController.getVideosByUploader);
 
 // Upload a new video
-router.post('/', upload.single('video'), videoController.uploadVideo);
+// Use fields to handle multiple files (video and thumbnail)
+router.post('/', upload.fields([
+  { name: 'video', maxCount: 1 },
+  { name: 'thumbnail', maxCount: 1 }
+]), videoController.uploadVideo);
 
 // Update video details
 router.put('/:id', videoController.updateVideo);
