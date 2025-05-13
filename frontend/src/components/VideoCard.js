@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { FaEye } from 'react-icons/fa';
+import { getThumbnailUrl } from '../utils/arweave';
 
 const VideoCard = ({ video }) => {
   const {
@@ -24,10 +25,8 @@ const VideoCard = ({ video }) => {
   // Truncate title if too long
   const truncatedTitle = title.length > 60 ? `${title.substring(0, 60)}...` : title;
   
-  // IPFS gateway URL for thumbnail
-  const thumbnailUrl = thumbnailCid
-    ? `https://ipfs.io/ipfs/${thumbnailCid}`
-    : `https://via.placeholder.com/320x180?text=STR3AM`;
+  // Get thumbnail URL using Arweave utility
+  const thumbnailUrl = getThumbnailUrl(thumbnailCid);
   
   // Placeholder for video without thumbnail
   const placeholderStyle = {

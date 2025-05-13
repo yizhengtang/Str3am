@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const { uploadToIPFS } = require('../config/ipfs');
+const { uploadToArweave } = require('../config/arweave');
 
 // Get user profile
 exports.getUser = async (req, res) => {
@@ -66,11 +66,9 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// Upload profile picture
-exports.uploadProfilePicture = async (req, res) => {
+// Update profile picture
+exports.updateProfilePicture = async (req, res) => {
   try {
-    const { walletAddress } = req.params;
-    
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -78,35 +76,42 @@ exports.uploadProfilePicture = async (req, res) => {
       });
     }
     
-    // Find user
+    const walletAddress = req.params.walletAddress;
+    
+    // Check if user exists
     let user = await User.findOne({ walletAddress });
     
     if (!user) {
-      user = await User.create({ walletAddress });
-    }
-    
-    // Upload image to IPFS
-    const result = await uploadToIPFS(req.file.buffer);
-    
-    if (!result || !result.cid) {
-      return res.status(500).json({
+      return res.status(404).json({
         success: false,
-        error: 'Failed to upload image to IPFS'
+        error: 'User not found'
       });
     }
     
-    // Update user profile
-    user.profilePicture = result.cid;
+    // Upload image to Arweave
+    const result = await uploadToArweave(req.file.buffer, req.file.mimetype, [
+      { name: 'Content-Type', value: req.file.mimetype },
+      { name: 'App-Name', value: 'STR3AM' },
+      { name: 'Type', value: 'profile-picture' }
+    ]);
+    
+    if (!result || !result.id) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to upload image to Arweave'
+      });
+    }
+    
+    // Update user profile picture
+    user.profilePicture = result.id;
     await user.save();
     
     res.status(200).json({
       success: true,
-      data: {
-        profilePicture: result.cid
-      }
+      data: user
     });
   } catch (error) {
-    console.error('Error uploading profile picture:', error);
+    console.error('Error updating profile picture:', error);
     res.status(500).json({
       success: false,
       error: 'Server Error'

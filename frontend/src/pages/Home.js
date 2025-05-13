@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import VideoCard from '../components/VideoCard';
 import { getVideos, getTopCreators } from '../utils/api';
 import { FaSpinner, FaFilter } from 'react-icons/fa';
+import { getAvatarUrl } from '../utils/arweave';
 
 const Home = () => {
   const [videos, setVideos] = useState([]);
@@ -193,7 +194,7 @@ const Home = () => {
                 <div className="w-16 h-16 mx-auto mb-3 rounded-full overflow-hidden bg-gray-700">
                   {creator.profilePicture ? (
                     <img
-                      src={`https://ipfs.io/ipfs/${creator.profilePicture}`}
+                      src={getAvatarUrl(creator.profilePicture)}
                       alt={creator.username || 'Creator'}
                       className="w-full h-full object-cover"
                     />
