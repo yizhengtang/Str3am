@@ -3,6 +3,40 @@ const { program } = require('../config/anchor');
 const { uploadToArweave } = require('../config/arweave');
 const Video = require('../models/Video');
 const User = require('../models/User');
+const VideoAccess = require('../models/VideoAccess');
+
+// Helper function to process refunds for a video (reused from interactionController)
+const processRefunds = async (videoId) => {
+  try {
+    // Find all users who paid for the video
+    const accessRecords = await VideoAccess.find({ videoId });
+    
+    if (accessRecords.length === 0) {
+      return { refunded: 0, total: 0 };
+    }
+    
+    // Process refunds for all users
+    let refundCount = 0;
+    for (const access of accessRecords) {
+      // Update user stats - refund the tokens spent
+      await User.findOneAndUpdate(
+        { walletAddress: access.viewerWallet },
+        { $inc: { tokensRefunded: access.tokensPaid } }
+      );
+      
+      // In a production environment, you would also process the actual blockchain refund here
+      // This would involve calling a smart contract to return the tokens/SOL to the user
+      // For this implementation, we're just tracking the refund in the database
+      
+      refundCount++;
+    }
+    
+    return { refunded: refundCount, total: accessRecords.length };
+  } catch (error) {
+    console.error('Error processing refunds:', error);
+    return { refunded: 0, total: 0, error };
+  }
+};
 
 // Get all videos with pagination
 exports.getVideos = async (req, res) => {
@@ -80,7 +114,9 @@ exports.uploadVideo = async (req, res) => {
   try {
     const { title, description, category, price, uploader } = req.body;
     
-    if (!req.file) {
+    // Check if we have video file
+    // With upload.fields, files are in req.files object grouped by field name
+    if (!req.files || !req.files.video || !req.files.video[0]) {
       return res.status(400).json({
         success: false,
         error: 'Please upload a video file'
@@ -99,18 +135,35 @@ exports.uploadVideo = async (req, res) => {
     }
     
     // Upload video to Arweave
-    const fileBuffer = req.file.buffer;
-    const result = await uploadToArweave(fileBuffer, req.file.mimetype, [
-      { name: 'Content-Type', value: req.file.mimetype },
+    const videoFile = req.files.video[0];
+    const videoBuffer = videoFile.buffer;
+    const videoResult = await uploadToArweave(videoBuffer, videoFile.mimetype, [
+      { name: 'Content-Type', value: videoFile.mimetype },
       { name: 'App-Name', value: 'STR3AM' },
       { name: 'Title', value: title }
     ]);
     
-    if (!result || !result.id) {
+    if (!videoResult || !videoResult.id) {
       return res.status(500).json({
         success: false,
         error: 'Failed to upload video to Arweave'
       });
+    }
+    
+    // Upload thumbnail to Arweave if provided
+    let thumbnailCid = null;
+    if (req.files.thumbnail && req.files.thumbnail[0]) {
+      const thumbnailFile = req.files.thumbnail[0];
+      const thumbnailBuffer = thumbnailFile.buffer;
+      const thumbnailResult = await uploadToArweave(thumbnailBuffer, thumbnailFile.mimetype, [
+        { name: 'Content-Type', value: thumbnailFile.mimetype },
+        { name: 'App-Name', value: 'STR3AM' },
+        { name: 'Type', value: 'thumbnail' }
+      ]);
+      
+      if (thumbnailResult && thumbnailResult.id) {
+        thumbnailCid = thumbnailResult.id;
+      }
     }
     
     // Generate a new keypair for the video account
@@ -126,15 +179,22 @@ exports.uploadVideo = async (req, res) => {
     );
     
     // Create video in database
-    const video = await Video.create({
+    const videoData = {
       title,
       description,
       category,
       price: parseFloat(price),
-      cid: result.id, // Using Arweave transaction ID instead of IPFS CID
+      cid: videoResult.id, // Using Arweave transaction ID instead of IPFS CID
       uploader,
       videoPubkey: randomPubkey.toString()
-    });
+    };
+    
+    // Add thumbnail if uploaded successfully
+    if (thumbnailCid) {
+      videoData.thumbnailCid = thumbnailCid;
+    }
+    
+    const video = await Video.create(videoData);
     
     // Update user's uploads count
     await User.findOneAndUpdate(
@@ -220,12 +280,23 @@ exports.deleteVideo = async (req, res) => {
     
     // Mark as inactive instead of deleting
     video.isActive = false;
+    video.takedownReason = 'uploader_removed';
     await video.save();
     
-    res.status(200).json({
+    // Process refunds for all users who paid for this video
+    const refundResult = await processRefunds(req.params.id);
+    
+    const response = {
       success: true,
       data: {}
-    });
+    };
+    
+    // Include refund information
+    if (refundResult) {
+      response.refunds = refundResult;
+    }
+    
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error deleting video:', error);
     res.status(500).json({
