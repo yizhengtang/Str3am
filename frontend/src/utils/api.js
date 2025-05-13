@@ -179,4 +179,90 @@ export const updateWatchTime = async (accessId, watchTime, completed = false) =>
     console.error('Error updating watch time:', error);
     throw error;
   }
+};
+
+// Interaction APIs
+export const addInteraction = async (videoId, interactionData) => {
+  try {
+    const response = await api.post(`/interactions/${videoId}`, interactionData);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding interaction:', error);
+    throw error;
+  }
+};
+
+export const getInteractionStats = async (videoId) => {
+  try {
+    const response = await api.get(`/interactions/stats/${videoId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting interaction stats:', error);
+    throw error;
+  }
+};
+
+export const getUserInteraction = async (videoId, userWallet) => {
+  try {
+    const response = await api.get(`/interactions/user/${videoId}?userWallet=${userWallet}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting user interaction:', error);
+    throw error;
+  }
+};
+
+// Comment APIs
+export const getVideoComments = async (videoId, parentId = null, page = 1, limit = 20) => {
+  try {
+    let url = `/comments/video/${videoId}?page=${page}&limit=${limit}`;
+    if (parentId !== null) {
+      url += `&parentId=${parentId}`;
+    }
+    const response = await api.get(url);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting comments:', error);
+    throw error;
+  }
+};
+
+export const addComment = async (videoId, commentData) => {
+  try {
+    const response = await api.post(`/comments/${videoId}`, commentData);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    throw error;
+  }
+};
+
+export const updateComment = async (commentId, commentData) => {
+  try {
+    const response = await api.put(`/comments/${commentId}`, commentData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating comment:', error);
+    throw error;
+  }
+};
+
+export const deleteComment = async (commentId, data) => {
+  try {
+    const response = await api.delete(`/comments/${commentId}`, { data });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    throw error;
+  }
+};
+
+export const voteComment = async (commentId, voteData) => {
+  try {
+    const response = await api.post(`/comments/vote/${commentId}`, voteData);
+    return response.data;
+  } catch (error) {
+    console.error('Error voting on comment:', error);
+    throw error;
+  }
 }; 
