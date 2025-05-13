@@ -5,7 +5,7 @@ STR3AM is a decentralized video streaming platform built on Solana blockchain th
 ## Features
 
 - **Pay-Per-View Model**: Users pay tokens only for the videos they want to watch
-- **Decentralized Storage**: Videos are stored on IPFS for censorship resistance
+- **Decentralized Storage**: Videos are stored on Arweave for permanent, censorship-resistant storage
 - **Creator Monetization**: Content creators earn tokens directly when users watch their videos
 - **Wallet Integration**: Seamless integration with Solana wallets (Phantom, Solflare, etc.)
 - **User Profiles**: Customizable profiles for creators and viewers
@@ -19,7 +19,7 @@ STR3AM is a decentralized video streaming platform built on Solana blockchain th
 - **Backend**: Node.js, Express
 - **Blockchain**: Solana, Anchor Framework
 - **Database**: MongoDB
-- **Storage**: IPFS
+- **Storage**: Arweave
 - **Authentication**: Solana Wallet Adapter
 
 ## Architecture
@@ -73,8 +73,7 @@ The application consists of three main components:
      MONGO_URI=mongodb://localhost:27017/str3am
      SOLANA_NETWORK=devnet
      PROGRAM_ID=your_program_id
-     IPFS_PROJECT_ID=your_ipfs_project_id
-     IPFS_PROJECT_SECRET=your_ipfs_project_secret
+     ARWEAVE_WALLET_JWK={"your":"arweave_wallet_json"}
      ```
 
 4. Deploy the Anchor program:
@@ -132,4 +131,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Solana Foundation
 - Anchor Framework
-- IPFS
+- Arweave

@@ -8,6 +8,7 @@ import { FaEye, FaUser, FaCalendarAlt, FaCoins } from 'react-icons/fa';
 import VideoPlayer from '../components/VideoPlayer';
 import PayToWatchModal from '../components/PayToWatchModal';
 import { getVideo, verifyAccess } from '../utils/api';
+import { getArweaveUrl } from '../utils/arweave';
 
 const VideoDetail = () => {
   const { id } = useParams();
@@ -70,9 +71,9 @@ const VideoDetail = () => {
     return formatDistanceToNow(new Date(dateString), { addSuffix: true });
   };
   
-  // IPFS gateway URL for video
+  // Get video URL from Arweave
   const getVideoUrl = (cid) => {
-    return `https://ipfs.io/ipfs/${cid}`;
+    return getArweaveUrl(cid);
   };
   
   if (loading) {

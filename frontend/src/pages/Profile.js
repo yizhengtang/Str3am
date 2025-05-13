@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { FaEdit, FaUpload, FaSpinner } from 'react-icons/fa';
 import VideoCard from '../components/VideoCard';
 import { getUser, getUserStats, getVideosByUploader, updateUser, uploadProfilePicture } from '../utils/api';
+import { getAvatarUrl } from '../utils/arweave';
 
 const Profile = () => {
   const { walletAddress } = useParams();
@@ -159,7 +160,7 @@ const Profile = () => {
             <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-700">
               {user?.profilePicture ? (
                 <img
-                  src={`https://ipfs.io/ipfs/${user.profilePicture}`}
+                  src={getAvatarUrl(user.profilePicture)}
                   alt={user.username || 'User'}
                   className="w-full h-full object-cover"
                 />

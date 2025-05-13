@@ -30,7 +30,7 @@ router.put('/:walletAddress', userController.updateUser);
 router.post(
   '/:walletAddress/profile-picture',
   upload.single('image'),
-  userController.uploadProfilePicture
+  userController.updateProfilePicture
 );
 
 // Get user stats

@@ -1,6 +1,6 @@
 const { PublicKey } = require('@solana/web3.js');
 const { program } = require('../config/anchor');
-const { uploadToIPFS } = require('../config/ipfs');
+const { uploadToArweave } = require('../config/arweave');
 const Video = require('../models/Video');
 const User = require('../models/User');
 
@@ -98,14 +98,18 @@ exports.uploadVideo = async (req, res) => {
       });
     }
     
-    // Upload video to IPFS
+    // Upload video to Arweave
     const fileBuffer = req.file.buffer;
-    const result = await uploadToIPFS(fileBuffer);
+    const result = await uploadToArweave(fileBuffer, req.file.mimetype, [
+      { name: 'Content-Type', value: req.file.mimetype },
+      { name: 'App-Name', value: 'STR3AM' },
+      { name: 'Title', value: title }
+    ]);
     
-    if (!result || !result.cid) {
+    if (!result || !result.id) {
       return res.status(500).json({
         success: false,
-        error: 'Failed to upload video to IPFS'
+        error: 'Failed to upload video to Arweave'
       });
     }
     
@@ -127,7 +131,7 @@ exports.uploadVideo = async (req, res) => {
       description,
       category,
       price: parseFloat(price),
-      cid: result.cid,
+      cid: result.id, // Using Arweave transaction ID instead of IPFS CID
       uploader,
       videoPubkey: randomPubkey.toString()
     });

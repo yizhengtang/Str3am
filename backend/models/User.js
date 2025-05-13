@@ -13,7 +13,7 @@ const UserSchema = new mongoose.Schema(
       trim: true
     },
     profilePicture: {
-      type: String, // CID for IPFS
+      type: String, // Transaction ID for Arweave
       trim: true
     },
     bio: {
