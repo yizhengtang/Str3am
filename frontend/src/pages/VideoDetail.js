@@ -149,6 +149,7 @@ const VideoDetail = () => {
             <VideoPlayer 
               videoUrl={getVideoUrl(video.cid)} 
               accessId={accessData?._id}
+              videoId={video._id}
               creator={video.uploader}
               creatorMint={video.creatorMint} // NEW: from backend or blockchain
               creatorTokenPDA={video.creatorTokenPDA} // NEW: from backend or blockchain
@@ -183,7 +184,7 @@ const VideoDetail = () => {
             <div className="flex flex-wrap items-center text-gray-400 text-sm mb-4">
               <div className="flex items-center mr-4">
                 <FaEye className="mr-1" />
-                <span>{video.viewCount} views</span>
+                <span>{video.viewCount || 0} views</span>
               </div>
               
               <div className="flex items-center mr-4">
