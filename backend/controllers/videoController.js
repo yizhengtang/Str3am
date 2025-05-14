@@ -63,6 +63,13 @@ exports.getVideos = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(limit);
     
+    // Debug logging for thumbnail data
+    console.log('Videos being returned:', videos.map(v => ({
+      id: v._id,
+      title: v.title,
+      thumbnailCid: v.thumbnailCid || 'none'
+    })));
+    
     const total = await Video.countDocuments(query);
     
     res.status(200).json({
@@ -114,6 +121,16 @@ exports.uploadVideo = async (req, res) => {
   try {
     const { title, description, category, price, uploader } = req.body;
     
+    console.log('Upload request received:', {
+      title,
+      hasThumbnail: req.files && req.files.thumbnail ? 'Yes' : 'No',
+      thumbnailDetails: req.files && req.files.thumbnail ? {
+        filename: req.files.thumbnail[0].originalname,
+        mimetype: req.files.thumbnail[0].mimetype,
+        size: req.files.thumbnail[0].size
+      } : 'None'
+    });
+    
     // Check if we have video file
     // With upload.fields, files are in req.files object grouped by field name
     if (!req.files || !req.files.video || !req.files.video[0]) {
@@ -152,9 +169,18 @@ exports.uploadVideo = async (req, res) => {
     
     // Upload thumbnail to Arweave if provided
     let thumbnailCid = null;
+    let thumbnailPath = null;
     if (req.files.thumbnail && req.files.thumbnail[0]) {
+      console.log('Processing thumbnail upload to Arweave');
       const thumbnailFile = req.files.thumbnail[0];
       const thumbnailBuffer = thumbnailFile.buffer;
+      
+      if (!Buffer.isBuffer(thumbnailBuffer)) {
+        console.error('Thumbnail is not a valid buffer');
+      } else {
+        console.log(`Thumbnail buffer size: ${thumbnailBuffer.length} bytes, type: ${thumbnailFile.mimetype}`);
+      }
+      
       const thumbnailResult = await uploadToArweave(thumbnailBuffer, thumbnailFile.mimetype, [
         { name: 'Content-Type', value: thumbnailFile.mimetype },
         { name: 'App-Name', value: 'STR3AM' },
@@ -163,7 +189,14 @@ exports.uploadVideo = async (req, res) => {
       
       if (thumbnailResult && thumbnailResult.id) {
         thumbnailCid = thumbnailResult.id;
+        thumbnailPath = thumbnailResult.localPath;
+        console.log('Thumbnail uploaded successfully with CID:', thumbnailCid);
+        console.log('Thumbnail local path:', thumbnailPath);
+      } else {
+        console.error('Failed to get valid thumbnail CID from Arweave');
       }
+    } else {
+      console.log('No thumbnail file provided in the request');
     }
     
     // Generate a new keypair for the video account
@@ -192,9 +225,13 @@ exports.uploadVideo = async (req, res) => {
     // Add thumbnail if uploaded successfully
     if (thumbnailCid) {
       videoData.thumbnailCid = thumbnailCid;
+      console.log('Adding thumbnailCid to video data:', thumbnailCid);
+    } else {
+      console.log('No thumbnailCid available to save with video');
     }
     
     const video = await Video.create(videoData);
+    console.log('Video created in database with ID:', video._id, 'thumbnailCid:', video.thumbnailCid || 'none');
     
     // Update user's uploads count
     await User.findOneAndUpdate(
