@@ -396,4 +396,38 @@ exports.getVideosByUploader = async (req, res) => {
       error: 'Server Error'
     });
   }
+};
+
+// Record a video view
+exports.recordView = async (req, res) => {
+  try {
+    const videoId = req.params.id;
+    
+    // Find the video
+    const video = await Video.findById(videoId);
+    
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        error: 'Video not found'
+      });
+    }
+    
+    // Increment the view count
+    video.viewCount += 1;
+    await video.save();
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        viewCount: video.viewCount
+      }
+    });
+  } catch (error) {
+    console.error('Error recording video view:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
 }; 

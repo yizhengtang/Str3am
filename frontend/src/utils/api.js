@@ -275,4 +275,14 @@ export const voteComment = async (commentId, voteData) => {
     console.error('Error voting on comment:', error);
     throw error;
   }
+};
+
+export const recordVideoView = async (videoId) => {
+  try {
+    const response = await api.post(`/videos/${videoId}/view`);
+    return response.data;
+  } catch (error) {
+    console.error('Error recording video view:', error);
+    throw error;
+  }
 }; 

@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { toast } from 'react-toastify';
-import { updateWatchTime } from '../utils/api';
+import { updateWatchTime, recordVideoView } from '../utils/api';
 import { rewardDuringWatch } from '../utils/solana'; // Adjust if path differs
 
 // Threshold for earning tokens (in seconds); default 1800s = 30 min
 const REWARD_THRESHOLD_SECONDS = parseInt(process.env.REACT_APP_REWARD_THRESHOLD_SECONDS) || 1800;
 
-const VideoPlayer = ({ videoUrl, accessId, onComplete, creator, creatorMint, creatorTokenPDA }) => {
+const VideoPlayer = ({ videoUrl, accessId, videoId, onComplete, creator, creatorMint, creatorTokenPDA }) => {
 
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -18,6 +18,7 @@ const VideoPlayer = ({ videoUrl, accessId, onComplete, creator, creatorMint, cre
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [rewarded, setRewarded] = useState(false);
+  const [viewRecorded, setViewRecorded] = useState(false);
   const walletAdapter = useWallet();
   const { publicKey } = walletAdapter;
 
@@ -55,6 +56,16 @@ const VideoPlayer = ({ videoUrl, accessId, onComplete, creator, creatorMint, cre
     if (video) {
       setCurrentTime(video.currentTime);
       setProgress((video.currentTime / video.duration) * 100);
+      
+      // Record view if video has started playing and view hasn't been recorded yet
+      if (!viewRecorded && video.currentTime > 0 && isPlaying) {
+        try {
+          await recordVideoView(videoId);
+          setViewRecorded(true);
+        } catch (error) {
+          console.error('Error recording video view:', error);
+        }
+      }
   
       // ✅ Reward if viewer has watched more than threshold seconds
       if (!rewarded && video.currentTime >= REWARD_THRESHOLD_SECONDS && publicKey) {

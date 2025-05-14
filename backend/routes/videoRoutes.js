@@ -108,4 +108,7 @@ router.put('/:id', videoController.updateVideo);
 // Delete video
 router.delete('/:id', videoController.deleteVideo);
 
+// Record a video view
+router.post('/:id/view', videoController.recordView);
+
 module.exports = router; 
