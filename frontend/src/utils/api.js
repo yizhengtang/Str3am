@@ -16,6 +16,16 @@ export const getVideos = async (page = 1, limit = 10, category = '', search = ''
     const response = await api.get(
       `/videos?page=${page}&limit=${limit}${category ? `&category=${category}` : ''}${search ? `&search=${search}` : ''}`
     );
+    // Debug log to inspect the response data
+    console.log('Video API response:', {
+      count: response.data.count,
+      pagination: response.data.pagination,
+      videos: response.data.data.map(v => ({
+        id: v._id,
+        title: v.title,
+        thumbnailCid: v.thumbnailCid || 'none'
+      }))
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching videos:', error);

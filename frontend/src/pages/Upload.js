@@ -137,7 +137,20 @@ const Upload = () => {
       formData.append('video', videoFile);
       
       if (thumbnailFile) {
+        console.log('Appending thumbnail to form data:', {
+          name: thumbnailFile.name,
+          type: thumbnailFile.type,
+          size: thumbnailFile.size
+        });
         formData.append('thumbnail', thumbnailFile);
+        
+        // Debug log to verify FormData contents
+        console.log('FormData entries:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`${key}: ${value instanceof File ? value.name : value}`);
+        }
+      } else {
+        console.log('No thumbnail file to upload');
       }
       
       // Simulate progress (in a real app, you'd use upload progress events)
@@ -153,6 +166,7 @@ const Upload = () => {
       
       // Upload video
       const response = await uploadVideo(formData);
+      console.log('Upload response:', response);
       
       clearInterval(progressInterval);
       setUploadProgress(100);
