@@ -6,13 +6,13 @@ const VideoAccess = require('../models/VideoAccess');
 
 // Verify access to video
 exports.verifyAccess = async (req, res) => {
+  const { videoId, walletAddress } = req.params;
   try {
-    const { videoId, walletAddress } = req.params;
-    
     // Check if video exists
     const video = await Video.findById(videoId);
     
     if (!video) {
+      console.error(`Error verifying access: Video not found with ID: ${videoId} for wallet: ${walletAddress}`);
       return res.status(404).json({
         success: false,
         error: 'Video not found'
@@ -26,6 +26,9 @@ exports.verifyAccess = async (req, res) => {
     });
     
     if (!access) {
+      // This is not necessarily an error, but a state indicating payment is needed.
+      // Logging it might be verbose, but can be useful for tracking access attempts.
+      console.info(`Access check: No access record found for videoId ${videoId}, walletAddress ${walletAddress}. Payment needed.`);
       return res.status(403).json({
         success: false,
         error: 'Access not granted',
@@ -40,30 +43,23 @@ exports.verifyAccess = async (req, res) => {
       accessData: access
     });
   } catch (error) {
-    console.error('Error verifying access:', error);
+    console.error(`Error verifying access for videoId ${videoId}, walletAddress ${walletAddress}:`, error);
     res.status(500).json({
       success: false,
-      error: 'Server Error'
+      error: 'An internal server error occurred while verifying access.'
     });
   }
 };
 
 // Record payment and grant access
 exports.recordPayment = async (req, res) => {
+  const { videoId, viewerWallet, tokensPaid, transactionSignature, videoPubkey, accessPubkey } = req.body;
   try {
-    const {
-      videoId,
-      viewerWallet,
-      tokensPaid,
-      transactionSignature,
-      videoPubkey,
-      accessPubkey
-    } = req.body;
-    
     // Check if video exists
     const video = await Video.findById(videoId);
     
     if (!video) {
+      console.error(`Error recording payment: Video not found with ID: ${videoId}`);
       return res.status(404).json({
         success: false,
         error: 'Video not found'
@@ -77,9 +73,10 @@ exports.recordPayment = async (req, res) => {
     });
     
     if (existingAccess) {
+      console.warn(`Attempt to record payment for already existing access: videoId ${videoId}, viewerWallet ${viewerWallet}`);
       return res.status(400).json({
         success: false,
-        error: 'Already has access',
+        error: 'User already has access to this video',
         accessData: existingAccess
       });
     }
@@ -95,6 +92,7 @@ exports.recordPayment = async (req, res) => {
     });
     
     // Update user stats
+    // Consider adding specific try-catch blocks for these if they are prone to errors
     await User.findOneAndUpdate(
       { walletAddress: viewerWallet },
       {
@@ -117,22 +115,30 @@ exports.recordPayment = async (req, res) => {
       data: access
     });
   } catch (error) {
-    console.error('Error recording payment:', error);
+    console.error(`Error recording payment for videoId ${videoId}, viewerWallet ${viewerWallet}:`, error);
+    // Check for specific Mongoose errors if applicable, e.g., validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data provided for payment record.',
+        details: error.errors
+      });
+    }
     res.status(500).json({
       success: false,
-      error: 'Server Error'
+      error: 'An internal server error occurred while recording payment.'
     });
   }
 };
 
 // Get payment info needed for pay to watch transaction
 exports.getPaymentInfo = async (req, res) => {
+  const { videoId } = req.params;
   try {
-    const { videoId } = req.params;
-    
     const video = await Video.findById(videoId);
     
     if (!video) {
+      console.error(`Error getting payment info: Video not found with ID: ${videoId}`);
       return res.status(404).json({
         success: false,
         error: 'Video not found'
@@ -140,7 +146,7 @@ exports.getPaymentInfo = async (req, res) => {
     }
     
     // In a real app, you would fetch the actual platform fee from the blockchain
-    const platformFeePercent = 10;
+    const platformFeePercent = 10; // Placeholder
     
     const paymentInfo = {
       videoPubkey: video.videoPubkey,
@@ -154,10 +160,10 @@ exports.getPaymentInfo = async (req, res) => {
       data: paymentInfo
     });
   } catch (error) {
-    console.error('Error getting payment info:', error);
+    console.error(`Error getting payment info for videoId ${videoId}:`, error);
     res.status(500).json({
       success: false,
-      error: 'Server Error'
+      error: 'An internal server error occurred while fetching payment information.'
     });
   }
 };
