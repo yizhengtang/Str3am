@@ -63,10 +63,10 @@ const VideoDetail = () => {
     checkAccess();
   }, [publicKey, video, id]);
   
-  // Handle payment success
-  const handlePaymentSuccess = (accessPubkey) => {
+  // Handle payment success, receiving full access record
+  const handlePaymentSuccess = (accessData) => {
     setHasAccess(true);
-    setAccessData({ accessPubkey });
+    setAccessData(accessData);
     setShowPaymentModal(false);
   };
   
@@ -142,6 +142,9 @@ const VideoDetail = () => {
             <VideoPlayer 
               videoUrl={getVideoUrl(video.cid)} 
               accessId={accessData?._id}
+              creator={video.uploader}
+              creatorMint={video.creatorMint} // NEW: from backend or blockchain
+              creatorTokenPDA={video.creatorTokenPDA} // NEW: from backend or blockchain
               onComplete={() => toast.success('Video completed!')}
             />
           ) : (

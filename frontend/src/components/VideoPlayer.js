@@ -2,8 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { toast } from 'react-toastify';
 import { updateWatchTime } from '../utils/api';
+import { rewardDuringWatch } from '../utils/solana'; // Adjust if path differs
 
-const VideoPlayer = ({ videoUrl, accessId, onComplete }) => {
+// Threshold for earning tokens (in seconds); default 1800s = 30 min
+const REWARD_THRESHOLD_SECONDS = parseInt(process.env.REACT_APP_REWARD_THRESHOLD_SECONDS) || 1800;
+
+const VideoPlayer = ({ videoUrl, accessId, onComplete, creator, creatorMint, creatorTokenPDA }) => {
+
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -12,7 +17,10 @@ const VideoPlayer = ({ videoUrl, accessId, onComplete }) => {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const { publicKey } = useWallet();
+  const [rewarded, setRewarded] = useState(false);
+  const walletAdapter = useWallet();
+  const { publicKey } = walletAdapter;
+
   
   // Update watch time periodically
   useEffect(() => {
@@ -42,18 +50,36 @@ const VideoPlayer = ({ videoUrl, accessId, onComplete }) => {
   };
   
   // Handle time update
-  const handleTimeUpdate = () => {
+  const handleTimeUpdate = async () => {
     const video = videoRef.current;
     if (video) {
       setCurrentTime(video.currentTime);
       setProgress((video.currentTime / video.duration) * 100);
-      
-      // Check if video is complete (95% watched)
+  
+      // ✅ Reward if viewer has watched more than threshold seconds
+      if (!rewarded && video.currentTime >= REWARD_THRESHOLD_SECONDS && publicKey) {
+        try {
+          await rewardDuringWatch(
+            walletAdapter,                   // Your Phantom or wallet adapter object
+            creator,                  // Creator's public key
+            creatorMint,              // Creator's token mint
+            creatorTokenPDA           // CreatorToken account PDA
+          );
+          setRewarded(true);
+          toast.success('🎉 Token rewarded for watching!');
+        } catch (err) {
+          console.error('Watch2Earn failed:', err);
+          toast.error('Token reward failed.');
+        }
+      }
+  
+      // 🔁 Call original logic for video completion
       if (video.currentTime / video.duration > 0.95 && accessId && publicKey) {
         handleVideoCompleted();
       }
     }
   };
+  
   
   // Handle video completed
   const handleVideoCompleted = async () => {

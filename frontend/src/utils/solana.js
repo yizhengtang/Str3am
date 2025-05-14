@@ -1,7 +1,8 @@
 import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, getAccount } from '@solana/spl-token';
 import { Program, AnchorProvider, web3, BN } from '@project-serum/anchor';
 import idl from './idl.json';
+
 
 // Program ID from environment or fallback
 const programId = process.env.REACT_APP_PROGRAM_ID || 'Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg7u31bQz5wA';
@@ -283,3 +284,69 @@ export const updateVideo = async (wallet, videoPubkey, updates) => {
     throw error;
   }
 }; 
+
+export const getViewerTokenBalance = async (wallet, creatorMint) => {
+  try {
+    const ata = await getAssociatedTokenAddress(new PublicKey(creatorMint), wallet.publicKey);
+    const account = await getAccount(getConnection(), ata);
+    return Number(account.amount);
+  } catch {
+    return 0;
+  }
+};
+
+export const payWithCreatorToken = async (wallet, creatorMint, creatorPubkey, amount) => {
+  try {
+    const program = getProgram(wallet);
+    const connection = getConnection();
+
+    const viewerTokenAccount = await getAssociatedTokenAddress(creatorMint, wallet.publicKey);
+    const creatorTokenAccount = await getAssociatedTokenAddress(creatorMint, creatorPubkey);
+
+    const tx = await program.methods
+      .payWithCreatorToken(new BN(amount))
+      .accounts({
+        viewer: wallet.publicKey,
+        viewerTokenAccount,
+        creatorTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    return tx;
+  } catch (err) {
+    console.error('Error paying with creator token:', err);
+    throw err;
+  }
+};
+
+export const rewardDuringWatch = async (wallet, creatorPubkey, creatorMint, creatorTokenPDA, amount = 1) => {
+  try {
+    const program = getProgram(wallet);
+    const connection = getConnection();
+
+    const viewerTokenAccount = await getAssociatedTokenAddress(creatorMint, wallet.publicKey);
+
+    const [mintAuthority] = await PublicKey.findProgramAddress(
+      [Buffer.from("mint_authority"), creatorPubkey.toBuffer()],
+      program.programId
+    );
+
+    const tx = await program.methods
+      .rewardDuringWatch(new BN(amount))
+      .accounts({
+        creator: creatorPubkey,
+        creatorMint: creatorMint,
+        viewerTokenAccount,
+        mintAuthority,
+        creatorToken: creatorTokenPDA,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    return tx;
+  } catch (err) {
+    console.error("Error rewarding viewer:", err);
+    throw err;
+  }
+};

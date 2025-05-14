@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { toast } from 'react-toastify';
-import { payToWatch } from '../utils/solana';
+import { payToWatch, getViewerTokenBalance } from '../utils/solana';
 import { recordPayment } from '../utils/api';
 import { FaLock, FaCoins } from 'react-icons/fa';
 
@@ -10,7 +10,7 @@ import { FaLock, FaCoins } from 'react-icons/fa';
 const normalizeAddress = (address) => {
   try {
     const pubkey = new PublicKey(address);
-    return pubkey.toString(); // Returns the canonical base58 encoding
+    return pubkey.toString();
   } catch (error) {
     console.error(`Invalid address format: ${address}`, error);
     return null;
@@ -19,41 +19,46 @@ const normalizeAddress = (address) => {
 
 const PayToWatchModal = ({ video, onPaymentSuccess, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState(null);
   const wallet = useWallet();
-  const { publicKey, signTransaction, sendTransaction } = wallet;
-  
+  const { publicKey, sendTransaction } = wallet;
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (publicKey && video.creatorMint) {
+        try {
+          const balance = await getViewerTokenBalance(wallet, video.creatorMint);
+          setTokenBalance(balance);
+        } catch (err) {
+          console.error('Failed to fetch token balance:', err);
+        }
+      }
+    };
+    fetchBalance();
+  }, [publicKey, video.creatorMint]);
+
   const handlePayment = async () => {
     if (!publicKey || !sendTransaction) {
       toast.error('Please connect your wallet first');
       return;
     }
-    
-    // Validate and normalize the uploader address
+
     const normalizedUploaderAddress = normalizeAddress(video.uploader);
     if (!normalizedUploaderAddress) {
       toast.error('Invalid uploader wallet address format. Please contact support.');
       return;
     }
-    
-    // Validate and normalize the video pubkey
+
     const normalizedVideoPubkey = normalizeAddress(video.videoPubkey);
     if (!normalizedVideoPubkey) {
       toast.error('Invalid video pubkey format. Please contact support.');
       return;
     }
-    
+
     setIsLoading(true);
-    
     let signature, accessPubkey;
 
     try {
-      console.log('Attempting blockchain payment with normalized addresses:', {
-        videoPubkey: normalizedVideoPubkey,
-        uploaderPubkey: normalizedUploaderAddress,
-        price: video.price
-      });
-      
-      // Execute blockchain transaction
       const paymentResult = await payToWatch(
         wallet,
         normalizedVideoPubkey,
@@ -70,8 +75,8 @@ const PayToWatchModal = ({ video, onPaymentSuccess, onClose }) => {
     }
 
     try {
-      // Record payment in backend
-      await recordPayment({
+      // Record payment and get the full access record
+      const result = await recordPayment({
         videoId: video._id,
         viewerWallet: publicKey.toString(),
         tokensPaid: video.price,
@@ -79,49 +84,43 @@ const PayToWatchModal = ({ video, onPaymentSuccess, onClose }) => {
         videoPubkey: normalizedVideoPubkey,
         accessPubkey
       });
-      
+
       toast.success('Payment successful! Enjoy the video.');
-      onPaymentSuccess(accessPubkey);
+      // Pass full access data to parent (including the generated _id)
+      onPaymentSuccess(result.data);
     } catch (error) {
-      console.error('Backend payment recording error:', error);
-      // Attempt to provide a more specific error message if available from the backend response
       const backendErrorMessage = error.response?.data?.error || error.message || 'Unknown error';
       toast.error(`Failed to record payment: ${backendErrorMessage}`);
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-white">Pay to Watch</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        
+
         <div className="mb-6">
           <div className="flex items-center justify-center mb-4">
             <div className="bg-indigo-600/20 p-4 rounded-full">
               <FaLock className="text-indigo-500 text-4xl" />
             </div>
           </div>
-          
-          <h3 className="text-white text-lg font-medium mb-2">
-            {video.title}
-          </h3>
-          
+
+          <h3 className="text-white text-lg font-medium mb-2">{video.title}</h3>
+
           <p className="text-gray-400 mb-4">
             This content requires a one-time payment to watch. You'll have permanent access after payment.
           </p>
-          
+
           <div className="bg-gray-700 rounded-lg p-4 mb-4">
             <div className="flex justify-between items-center">
               <span className="text-gray-300">Price:</span>
@@ -130,22 +129,25 @@ const PayToWatchModal = ({ video, onPaymentSuccess, onClose }) => {
                 {video.price} SOL
               </div>
             </div>
-            
             <div className="flex justify-between items-center mt-2">
               <span className="text-gray-300">Creator:</span>
-              <span className="text-gray-300 truncate max-w-[200px]">
-                {video.uploader}
-              </span>
+              <span className="text-gray-300 truncate max-w-[200px]">{video.uploader}</span>
             </div>
+            {tokenBalance !== null && (
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-gray-300">Your Token Cashback:</span>
+                <span className="text-green-400 font-medium">~1 {video.tokenSymbol || 'CRT'}</span>
+              </div>
+            )}
           </div>
-          
+
           {!publicKey && (
             <p className="text-red-400 text-sm mb-4">
               Please connect your wallet to continue with the payment.
             </p>
           )}
         </div>
-        
+
         <div className="flex space-x-3">
           <button
             onClick={onClose}
@@ -153,7 +155,7 @@ const PayToWatchModal = ({ video, onPaymentSuccess, onClose }) => {
           >
             Cancel
           </button>
-          
+
           <button
             onClick={handlePayment}
             disabled={isLoading || !publicKey}
@@ -175,4 +177,4 @@ const PayToWatchModal = ({ video, onPaymentSuccess, onClose }) => {
   );
 };
 
-export default PayToWatchModal; 
+export default PayToWatchModal;
