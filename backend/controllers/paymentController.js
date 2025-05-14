@@ -19,6 +19,21 @@ exports.verifyAccess = async (req, res) => {
       });
     }
     
+    // Check if the user is the uploader of the video
+    if (video.uploader === walletAddress) {
+      // If user is the uploader, grant automatic access
+      console.info(`Access granted to uploader: ${walletAddress} for their own video: ${videoId}`);
+      return res.status(200).json({
+        success: true,
+        hasAccess: true,
+        accessData: {
+          videoId: video._id,
+          viewerWallet: walletAddress,
+          isUploader: true
+        }
+      });
+    }
+    
     // Check if user has access
     const access = await VideoAccess.findOne({
       videoId,

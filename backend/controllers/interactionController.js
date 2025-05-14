@@ -49,6 +49,20 @@ const hasPaidAccess = async (req, res, next) => {
       });
     }
     
+    // First check if user is the video uploader
+    const video = await Video.findById(videoId);
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        error: 'Video not found'
+      });
+    }
+    
+    // If user is the uploader, grant access automatically
+    if (video.uploader === userWallet) {
+      return next();
+    }
+    
     // Check if the user has paid for the video
     const access = await VideoAccess.findOne({
       videoId,
