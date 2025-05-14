@@ -48,6 +48,13 @@ const VideoDetail = () => {
     const checkAccess = async () => {
       if (!publicKey || !video) return;
       
+      // If the current user is the uploader, automatically grant access
+      if (publicKey.toString() === video.uploader) {
+        setHasAccess(true);
+        setAccessData({ isUploader: true });
+        return;
+      }
+      
       try {
         const response = await verifyAccess(id, publicKey.toString());
         setHasAccess(response.hasAccess);
