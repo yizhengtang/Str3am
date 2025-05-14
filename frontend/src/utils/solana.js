@@ -86,157 +86,30 @@ export const uploadVideo = async (wallet, title, description, cid, price, catego
 // Pay to watch a video
 export const payToWatch = async (wallet, videoPubkey, uploaderPubkey, price) => {
   try {
-    console.log('Starting pay to watch with parameters:', {
-      videoPubkey,
-      uploaderPubkey,
-      price
-    });
-    
-    // TESTING MODE - Bypass actual blockchain transactions
-    // Development workaround to avoid TokenOwnerOffCurveError
-    console.log('⚠️ Using development workaround for TokenOwnerOffCurveError');
-    
-    // Simply create a signature and access PDA without actual blockchain interaction
-    // This allows testing the UI flow without requiring valid token accounts
-    const program = getProgram(wallet);
-    
-    // Convert string pubkeys to PublicKey objects (these are still needed for the access PDA)
-    const videoPublicKey = new PublicKey(videoPubkey);
+    console.log('Starting pay to watch with parameters:', { videoPubkey, uploaderPubkey, price });
 
-    // Find access account PDA - this is still needed for the database record
-    const [accessPDA] = await PublicKey.findProgramAddress(
-      [Buffer.from('access'), videoPublicKey.toBuffer(), wallet.publicKey.toBuffer()],
-      program.programId
-    );
-    
-    // Generate a fake transaction signature
-    const mockSignature = `mock_tx_${Date.now().toString()}`;
-    console.log('Generated mock transaction signature:', mockSignature);
-    
-    return {
-      signature: mockSignature,
-      accessPubkey: accessPDA.toString()
-    };
-    
-    /* Original implementation preserved for reference
-    // Validate that uploaderPubkey is a valid public key string
-    try {
-      // This will throw an error if the public key is invalid
-      new PublicKey(uploaderPubkey);
-    } catch (e) {
-      console.error('Invalid uploader public key format:', uploaderPubkey, e);
-      throw new Error(`The uploader's wallet address is invalid: ${e.message}`);
-    }
-    
+    // Derive access PDA for recording access in your backend
     const program = getProgram(wallet);
     const connection = getConnection();
-    
-    // Convert string pubkeys to PublicKey objects
     const videoPublicKey = new PublicKey(videoPubkey);
     const uploaderPublicKey = new PublicKey(uploaderPubkey);
-    
-    // Log the public keys for debugging
-    console.log('Public keys:', {
-      videoPublicKey: videoPublicKey.toString(),
-      uploaderPublicKey: uploaderPublicKey.toString(),
-      viewerPublicKey: wallet.publicKey.toString()
-    });
-    
-    // Find platform account
-    const [platformPDA] = await PublicKey.findProgramAddress(
-      [Buffer.from('platform')],
-      program.programId
-    );
-    
-    // Find access account PDA
     const [accessPDA] = await PublicKey.findProgramAddress(
       [Buffer.from('access'), videoPublicKey.toBuffer(), wallet.publicKey.toBuffer()],
       program.programId
     );
-    
-    // Get token accounts
-    const viewerTokenAccount = await getAssociatedTokenAddress(
-      new PublicKey('So11111111111111111111111111111111111111112'), // Wrapped SOL mint
-      wallet.publicKey
+
+    // Execute a native SOL transfer from viewer to uploader
+    const lamports = Math.floor(price * web3.LAMPORTS_PER_SOL);
+    const tx = new Transaction().add(
+      SystemProgram.transfer({ fromPubkey: wallet.publicKey, toPubkey: uploaderPublicKey, lamports })
     );
-    
-    console.log('Creating token account for uploader:', uploaderPublicKey.toString());
-    const uploaderTokenAccount = await getAssociatedTokenAddress(
-      new PublicKey('So11111111111111111111111111111111111111112'), // Wrapped SOL mint
-      uploaderPublicKey
-    );
-    
-    const platformTokenAccount = await getAssociatedTokenAddress(
-      new PublicKey('So11111111111111111111111111111111111111112'), // Wrapped SOL mint
-      platformPDA
-    );
-    
-    console.log('Token accounts:', {
-      viewerTokenAccount: viewerTokenAccount.toString(),
-      uploaderTokenAccount: uploaderTokenAccount.toString(),
-      platformTokenAccount: platformTokenAccount.toString()
-    });
-    
-    // Check if token accounts exist and create if needed
-    const transaction = new Transaction();
-    
-    // Check if uploader token account exists
-    console.log('Checking if uploader token account exists...');
-    const uploaderTokenAccountInfo = await connection.getAccountInfo(uploaderTokenAccount);
-    if (!uploaderTokenAccountInfo) {
-      console.log('Uploader token account does not exist, creating it...');
-      transaction.add(
-        createAssociatedTokenAccountInstruction(
-          wallet.publicKey,
-          uploaderTokenAccount,
-          uploaderPublicKey,
-          new PublicKey('So11111111111111111111111111111111111111112')
-        )
-      );
-    } else {
-      console.log('Uploader token account exists');
-    }
-    
-    // Check if platform token account exists
-    const platformTokenAccountInfo = await connection.getAccountInfo(platformTokenAccount);
-    if (!platformTokenAccountInfo) {
-      transaction.add(
-        createAssociatedTokenAccountInstruction(
-          wallet.publicKey,
-          platformTokenAccount,
-          platformPDA,
-          new PublicKey('So11111111111111111111111111111111111111112')
-        )
-      );
-    }
-    
-    // Add pay to watch instruction
-    transaction.add(
-      await program.methods
-        .payToWatch()
-        .accounts({
-          video: videoPublicKey,
-          platform: platformPDA,
-          viewer: wallet.publicKey,
-          access: accessPDA,
-          viewerTokenAccount,
-          uploaderTokenAccount,
-          platformTokenAccount,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SystemProgram.programId,
-        })
-        .instruction()
-    );
-    
-    // Send transaction
-    const signature = await wallet.sendTransaction(transaction, connection);
+    const signature = await wallet.sendTransaction(tx, connection);
     await connection.confirmTransaction(signature, 'confirmed');
-    
+
     return {
       signature,
       accessPubkey: accessPDA.toString()
     };
-    */
   } catch (error) {
     console.error('Error paying to watch video:', error);
     if (error.logs) {
