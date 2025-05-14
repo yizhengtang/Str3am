@@ -1,4 +1,3 @@
-const anchor = require('@project-serum/anchor');
 const { program } = require('../config/anchor');
 
 exports.createCreatorToken = async (req, res) => {
@@ -47,5 +46,58 @@ exports.createCreatorToken = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// List all channel tokens and balances for a given viewer wallet
+exports.listViewerTokens = async (req, res, next) => {
+  try {
+    const { walletAddress: viewer } = req.params;
+    const { getProvider, getProgram } = require('../config/anchor');
+    const { getAccount, getAssociatedTokenAddress } = require('@solana/spl-token');
+    const CreatorToken = require('../models/CreatorToken');
+    const Video = require('../models/Video');
+    const VideoAccess = require('../models/VideoAccess');
+    const User = require('../models/User');
+
+    const provider = getProvider();
+    const program = getProgram();
+    const entries = await CreatorToken.find();
+    const results = [];
+    const THRESHOLD = 30; // seconds per token
+    for (const ct of entries) {
+      const mintPub = new (require('@solana/web3.js').PublicKey)(ct.mint);
+      const viewerPub = new (require('@solana/web3.js').PublicKey)(viewer);
+      const ata = await getAssociatedTokenAddress(mintPub, viewerPub);
+      let amount = 0;
+      try {
+        const accountInfo = await getAccount(provider.connection, ata);
+        amount = Number(accountInfo.amount);
+      } catch {
+        amount = 0;
+      }
+      if (amount > 0) {
+        // Compute cumulative watch time across all videos by this creator
+        const videos = await Video.find({ uploader: ct.creator }).select('_id').lean();
+        const videoIds = videos.map(v => v._id);
+        const agg = await VideoAccess.aggregate([
+          { $match: { viewerWallet: viewer, videoId: { $in: videoIds } } },
+          { $group: { _id: null, totalWatch: { $sum: '$watchTime' } } }
+        ]);
+        const totalWatch = agg[0]?.totalWatch || 0;
+        // Progress towards next token
+        const progress = (totalWatch % THRESHOLD) / THRESHOLD;
+        const creatorUser = await User.findOne({ walletAddress: ct.creator });
+        results.push({
+          creator: ct.creator,
+          username: creatorUser?.username || ct.creator,
+          balance: amount,
+          progress
+        });
+      }
+    }
+    res.status(200).json({ success: true, data: results });
+  } catch (error) {
+    next(error);
   }
 };

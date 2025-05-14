@@ -4,8 +4,8 @@ import { toast } from 'react-toastify';
 import { updateWatchTime, recordVideoView } from '../utils/api';
 import { rewardDuringWatch } from '../utils/solana'; // Adjust if path differs
 
-// Threshold for earning tokens (in seconds); default 1800s = 30 min
-const REWARD_THRESHOLD_SECONDS = parseInt(process.env.REACT_APP_REWARD_THRESHOLD_SECONDS) || 1800;
+// Threshold for earning tokens (in seconds); default 30s per token
+const REWARD_THRESHOLD_SECONDS = parseInt(process.env.REACT_APP_REWARD_THRESHOLD_SECONDS) || 30;
 
 const VideoPlayer = ({ videoUrl, accessId, videoId, onComplete, creator, creatorMint, creatorTokenPDA }) => {
 
@@ -19,6 +19,7 @@ const VideoPlayer = ({ videoUrl, accessId, videoId, onComplete, creator, creator
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [rewarded, setRewarded] = useState(false);
   const [viewRecorded, setViewRecorded] = useState(false);
+  const [hasCompleted, setHasCompleted] = useState(false);
   const walletAdapter = useWallet();
   const { publicKey } = walletAdapter;
 
@@ -84,8 +85,9 @@ const VideoPlayer = ({ videoUrl, accessId, videoId, onComplete, creator, creator
         }
       }
   
-      // 🔁 Call original logic for video completion
-      if (video.currentTime / video.duration > 0.95 && accessId && publicKey) {
+      // 🔁 Call original logic for video completion, only once
+      if (!hasCompleted && video.currentTime / video.duration > 0.95 && accessId && publicKey) {
+        setHasCompleted(true);
         handleVideoCompleted();
       }
     }
