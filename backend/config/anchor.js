@@ -1,5 +1,6 @@
 const { Connection, Keypair, PublicKey } = require('@solana/web3.js');
-const { Program, AnchorProvider, Wallet } = require('@project-serum/anchor');
+const solanaAnchor = require('@project-serum/anchor');
+const { Program, AnchorProvider, Wallet, BN, utils } = solanaAnchor;
 const fs = require('fs');
 const path = require('path');
 const idl = require('./idl.json');
@@ -62,10 +63,18 @@ const programId = new PublicKey(
 );
 const program = new Program(idl, programId, provider);
 
+// Export everything needed by other modules
 module.exports = {
+  // Anchor utilities
+  BN,
+  utils,
+  // Provider and program
   connection,
   wallet,
   provider,
   program,
   programId,
+  // Helper getters for rewardController
+  getProvider: () => provider,
+  getProgram: () => program,
 }; 

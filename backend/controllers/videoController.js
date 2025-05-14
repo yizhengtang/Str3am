@@ -95,17 +95,38 @@ exports.getVideos = async (req, res) => {
 exports.getVideo = async (req, res) => {
   try {
     const video = await Video.findById(req.params.id);
-    
+
     if (!video) {
       return res.status(404).json({
         success: false,
         error: 'Video not found'
       });
     }
-    
+
+    // --- Enhancement: Fetch creator token data from on-chain ---
+    const uploaderPubkey = new PublicKey(video.uploader);
+    const [creatorTokenPDA] = await PublicKey.findProgramAddress(
+      [Buffer.from('creator_token'), uploaderPubkey.toBuffer()],
+      program.programId
+    );
+
+    let creatorMint = null;
+
+    try {
+      const creatorTokenData = await program.account.creatorToken.fetch(creatorTokenPDA);
+      creatorMint = creatorTokenData.mint.toBase58();
+    } catch (err) {
+      console.warn('Creator token not found on-chain:', err.message);
+    }
+
+    // --- Respond with video and creator token info ---
     res.status(200).json({
       success: true,
-      data: video
+      data: {
+        ...video.toObject(),
+        creatorMint,
+        creatorTokenPDA: creatorTokenPDA.toBase58()
+      }
     });
   } catch (error) {
     console.error('Error fetching video:', error);
@@ -115,6 +136,7 @@ exports.getVideo = async (req, res) => {
     });
   }
 };
+
 
 // Upload a new video
 exports.uploadVideo = async (req, res) => {

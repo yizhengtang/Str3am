@@ -15,6 +15,9 @@ const fs = require('fs');
 // Import development uploads directory for serving locally stored files
 const { isDevelopment, DEV_UPLOADS_DIR } = require('./config/arweave');
 
+// Route for creator-token endpoints
+const creatorTokenRoutes = require('./routes/creatorTokenRoutes');
+
 // Set NODE_ENV to development if not specified
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 console.log(`Running in ${process.env.NODE_ENV} mode`);
@@ -93,6 +96,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/interactions', interactionRoutes);
 app.use('/api/comments', commentRoutes);
+app.use('/api/creator-token', creatorTokenRoutes);
+app.use('/api/reward', require('./routes/rewardRoutes'));
+
 
 // Root route
 app.get('/', (req, res) => {
