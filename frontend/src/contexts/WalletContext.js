@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { ConnectionProvider, WalletProvider as SolanaWalletProvider } from '@solana/wallet-adapter-react';
+import { ConnectionProvider, WalletProvider as SolanaWalletProvider, useWallet as useSolanaWalletReact } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { PhantomWalletAdapter, SolflareWalletAdapter, TorusWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
@@ -27,14 +27,24 @@ export function WalletProvider({ children }) {
     ],
     []
   );
-  
+
+  // Inner component to access Solana wallet context
+  const WalletContextBridge = ({ children }) => {
+    const solanaWallet = useSolanaWalletReact();
+    return (
+      <WalletContext.Provider value={solanaWallet}>
+        {children}
+      </WalletContext.Provider>
+    );
+  };
+
   return (
     <ConnectionProvider endpoint={endpoint}>
       <SolanaWalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
-          <WalletContext.Provider value={{}}>
+          <WalletContextBridge>
             {children}
-          </WalletContext.Provider>
+          </WalletContextBridge>
         </WalletModalProvider>
       </SolanaWalletProvider>
     </ConnectionProvider>
@@ -48,4 +58,7 @@ export function useWallet() {
     throw new Error('useWallet must be used within a WalletProvider');
   }
   return context;
-} 
+}
+
+// It might be simpler to just re-export the original useWallet if no custom logic is needed in the context provider
+// export { useSolanaWalletReact as useWallet }; 

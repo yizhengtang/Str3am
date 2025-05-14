@@ -1,4 +1,30 @@
 const mongoose = require('mongoose');
+const { PublicKey } = require('@solana/web3.js');
+
+// Validate Solana address format
+const validateSolanaAddress = {
+  validator: function(v) {
+    if (!v) return false;
+    try {
+      // This will throw if the address is invalid
+      new PublicKey(v);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  },
+  message: props => `${props.value} is not a valid Solana address!`
+};
+
+// Normalize address to canonical format before saving
+function normalizeAddress(address) {
+  if (!address) return address;
+  try {
+    return new PublicKey(address).toString();
+  } catch (error) {
+    return address; // Return original if invalid (will fail validation)
+  }
+}
 
 const VideoSchema = new mongoose.Schema(
   {
@@ -77,12 +103,16 @@ const VideoSchema = new mongoose.Schema(
     uploader: {
       type: String, // Solana wallet address
       required: true,
-      trim: true
+      trim: true,
+      validate: validateSolanaAddress,
+      set: normalizeAddress
     },
     videoPubkey: {
       type: String, // Solana video account pubkey
       required: true,
-      trim: true
+      trim: true,
+      validate: validateSolanaAddress,
+      set: normalizeAddress
     },
     duration: {
       type: Number,

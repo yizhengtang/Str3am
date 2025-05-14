@@ -1,46 +1,92 @@
 import React, { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
 import { toast } from 'react-toastify';
 import { payToWatch } from '../utils/solana';
 import { recordPayment } from '../utils/api';
 import { FaLock, FaCoins } from 'react-icons/fa';
 
+// Helper function to normalize Solana address
+const normalizeAddress = (address) => {
+  try {
+    const pubkey = new PublicKey(address);
+    return pubkey.toString(); // Returns the canonical base58 encoding
+  } catch (error) {
+    console.error(`Invalid address format: ${address}`, error);
+    return null;
+  }
+};
+
 const PayToWatchModal = ({ video, onPaymentSuccess, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { publicKey, signTransaction } = useWallet();
+  const wallet = useWallet();
+  const { publicKey, signTransaction, sendTransaction } = wallet;
   
   const handlePayment = async () => {
-    if (!publicKey || !signTransaction) {
+    if (!publicKey || !sendTransaction) {
       toast.error('Please connect your wallet first');
+      return;
+    }
+    
+    // Validate and normalize the uploader address
+    const normalizedUploaderAddress = normalizeAddress(video.uploader);
+    if (!normalizedUploaderAddress) {
+      toast.error('Invalid uploader wallet address format. Please contact support.');
+      return;
+    }
+    
+    // Validate and normalize the video pubkey
+    const normalizedVideoPubkey = normalizeAddress(video.videoPubkey);
+    if (!normalizedVideoPubkey) {
+      toast.error('Invalid video pubkey format. Please contact support.');
       return;
     }
     
     setIsLoading(true);
     
+    let signature, accessPubkey;
+
     try {
+      console.log('Attempting blockchain payment with normalized addresses:', {
+        videoPubkey: normalizedVideoPubkey,
+        uploaderPubkey: normalizedUploaderAddress,
+        price: video.price
+      });
+      
       // Execute blockchain transaction
-      const { signature, accessPubkey } = await payToWatch(
-        { publicKey, signTransaction },
-        video.videoPubkey,
-        video.uploader,
+      const paymentResult = await payToWatch(
+        wallet,
+        normalizedVideoPubkey,
+        normalizedUploaderAddress,
         video.price
       );
-      
+      signature = paymentResult.signature;
+      accessPubkey = paymentResult.accessPubkey;
+    } catch (error) {
+      console.error('Blockchain payment error:', error);
+      toast.error(`Blockchain payment failed: ${error.message || 'Unknown error'}`);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
       // Record payment in backend
       await recordPayment({
         videoId: video._id,
         viewerWallet: publicKey.toString(),
         tokensPaid: video.price,
         transactionSignature: signature,
-        videoPubkey: video.videoPubkey,
+        videoPubkey: normalizedVideoPubkey,
         accessPubkey
       });
       
       toast.success('Payment successful! Enjoy the video.');
       onPaymentSuccess(accessPubkey);
     } catch (error) {
-      console.error('Payment error:', error);
-      toast.error(`Payment failed: ${error.message || 'Unknown error'}`);
+      console.error('Backend payment recording error:', error);
+      // Attempt to provide a more specific error message if available from the backend response
+      const backendErrorMessage = error.response?.data?.error || error.message || 'Unknown error';
+      toast.error(`Failed to record payment: ${backendErrorMessage}`);
     } finally {
       setIsLoading(false);
     }
