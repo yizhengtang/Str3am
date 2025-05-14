@@ -42,7 +42,7 @@ exports.updateUser = async (req, res) => {
         walletAddress,
         username: username || '',
         bio: bio || '',
-        socialLinks: socialLinks || {}
+        socialLinks: socialLinks || {},
       });
     } else {
       // Update existing user
