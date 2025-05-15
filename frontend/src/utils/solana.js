@@ -9,6 +9,9 @@ const programId = process.env.REACT_APP_PROGRAM_ID || 'Fg6PaFpoGXkYsidMpWTK6W2Be
 
 // Get the RPC endpoint based on network
 const getEndpoint = () => {
+  if (process.env.REACT_APP_SOLANA_RPC_URL) {
+     return process.env.REACT_APP_SOLANA_RPC_URL;
+    }
   const network = process.env.REACT_APP_SOLANA_NETWORK || 'devnet';
   switch (network) {
     case 'mainnet':
@@ -105,6 +108,8 @@ export const payToWatch = async (wallet, videoPubkey, uploaderPubkey, price) => 
     );
     const signature = await wallet.sendTransaction(tx, connection);
     await connection.confirmTransaction(signature, 'confirmed');
+
+    console.log(`✅ payToWatch: transferred ${lamports} lamports in tx ${signature}`);
 
     return {
       signature,
