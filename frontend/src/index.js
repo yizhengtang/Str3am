@@ -15,10 +15,12 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-      <WalletProvider>
-        <App />
-        <ToastContainer position="bottom-right" />
-      </WalletProvider>
+      <div data-theme="cinema" className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-base-content">
+        <WalletProvider>
+          <App />
+          <ToastContainer position="bottom-right" />
+        </WalletProvider>
+      </div>
     </BrowserRouter>
   </React.StrictMode>
 ); 

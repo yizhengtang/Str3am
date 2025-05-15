@@ -198,23 +198,47 @@ export const rewardDuringWatch = async (wallet, creatorPubkey, creatorMint, crea
     const program = getProgram(wallet);
     const connection = getConnection();
 
-    const viewerTokenAccount = await getAssociatedTokenAddress(creatorMint, wallet.publicKey);
+    // Convert string addresses to PublicKey objects
+    const mintPubkey = new PublicKey(creatorMint);
+    const creatorPubKeyObj = new PublicKey(creatorPubkey);
+    const creatorTokenPDAPubkey = new PublicKey(creatorTokenPDA);
+    const viewerPubkey = wallet.publicKey;
 
+    // Determine the associated token account for the viewer
+    const viewerTokenAccount = await getAssociatedTokenAddress(mintPubkey, viewerPubkey);
+
+    // Create the ATA if it doesn't exist
+    const accountInfo = await connection.getAccountInfo(viewerTokenAccount);
+    let preInstructions = [];
+    if (!accountInfo) {
+      preInstructions.push(
+        createAssociatedTokenAccountInstruction(
+          viewerPubkey,
+          viewerTokenAccount,
+          viewerPubkey,
+          mintPubkey,
+        )
+      );
+    }
+
+    // Derive mint authority PDA
     const [mintAuthority] = await PublicKey.findProgramAddress(
-      [Buffer.from("mint_authority"), creatorPubkey.toBuffer()],
+      [Buffer.from("mint_authority"), creatorPubKeyObj.toBuffer()],
       program.programId
     );
 
+    // Call Anchor reward instruction with pre-instructions if necessary
     const tx = await program.methods
       .rewardDuringWatch(new BN(amount))
       .accounts({
-        creator: creatorPubkey,
-        creatorMint: creatorMint,
+        creator: creatorPubKeyObj,
+        creatorMint: mintPubkey,
         viewerTokenAccount,
         mintAuthority,
-        creatorToken: creatorTokenPDA,
+        creatorToken: creatorTokenPDAPubkey,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
+      .preInstructions(preInstructions)
       .rpc();
 
     return tx;

@@ -18,11 +18,14 @@ const upload = multer({
 // Get all videos with pagination
 router.get('/', videoController.getVideos);
 
-// Get a single video by ID
-router.get('/:id', videoController.getVideo);
-
 // Get videos by uploader
 router.get('/uploader/:walletAddress', videoController.getVideosByUploader);
+
+// Get the single most viewed video
+router.get('/top', videoController.getTopVideo);
+
+// Get a single video by ID
+router.get('/:id', videoController.getVideo);
 
 // Upload a new video
 // Use fields to handle multiple files (video and thumbnail)

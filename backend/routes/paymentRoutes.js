@@ -14,4 +14,7 @@ router.get('/info/:videoId', paymentController.getPaymentInfo);
 // Update watch time
 router.put('/watch-time/:accessId', paymentController.updateWatchTime);
 
+// List purchased videos for a viewer
+router.get('/access/:walletAddress', paymentController.listPurchasedVideos);
+
 module.exports = router; 

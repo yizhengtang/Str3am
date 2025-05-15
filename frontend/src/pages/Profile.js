@@ -4,7 +4,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { toast } from 'react-toastify';
 import { FaEdit, FaUpload, FaSpinner } from 'react-icons/fa';
 import VideoCard from '../components/VideoCard';
-import { getUser, getUserStats, getVideosByUploader, updateUser, uploadProfilePicture } from '../utils/api';
+import { getUser, getUserStats, getVideosByUploader, updateUser, uploadProfilePicture, getPurchasedVideos } from '../utils/api';
 import { getAvatarUrl } from '../utils/arweave';
 
 const Profile = () => {
@@ -15,6 +15,7 @@ const Profile = () => {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [videos, setVideos] = useState([]);
+  const [purchasedVideos, setPurchasedVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editMode, setEditMode] = useState(false);
@@ -32,29 +33,50 @@ const Profile = () => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        
-        // Get user profile
-        const userResponse = await getUser(walletAddress);
-        setUser(userResponse.data);
-        
-        // Set form values if user exists
-        if (userResponse.data) {
-          setUsername(userResponse.data.username || '');
-          setBio(userResponse.data.bio || '');
-          setSocialLinks(userResponse.data.socialLinks || {
-            twitter: '',
-            instagram: '',
-            website: ''
-          });
+        let userData;
+        // Get or create user profile: treat 404 as new user
+        try {
+          const userResponse = await getUser(walletAddress);
+          userData = userResponse.data;
+        } catch (err) {
+          if (err.response && err.response.status === 404) {
+            userData = { walletAddress, username: '', bio: '', socialLinks: {} };
+          } else {
+            throw err;
+          }
         }
+        setUser(userData);
         
-        // Get user stats
-        const statsResponse = await getUserStats(walletAddress);
-        setStats(statsResponse.data);
+        // Initialize form values
+        setUsername(userData.username || '');
+        setBio(userData.bio || '');
+        setSocialLinks(userData.socialLinks || { twitter: '', instagram: '', website: '' });
+        
+        // Get user stats (treat 404 as new user with zero stats)
+        try {
+          const statsResponse = await getUserStats(walletAddress);
+          setStats(statsResponse.data);
+        } catch (err) {
+          if (err.response && err.response.status === 404) {
+            setStats({ videosUploaded: 0, videosWatched: 0, tokensEarned: 0, tokensSpent: 0 });
+          } else {
+            throw err;
+          }
+        }
         
         // Get user videos
         const videosResponse = await getVideosByUploader(walletAddress);
         setVideos(videosResponse.data);
+        
+        // Fetch purchased videos for own profile
+        if (isOwnProfile) {
+          try {
+            const purchasedRes = await getPurchasedVideos(walletAddress);
+            setPurchasedVideos(purchasedRes.data);
+          } catch (err) {
+            console.error('Error fetching purchased videos:', err);
+          }
+        }
         
         setError(null);
       } catch (error) {
@@ -407,6 +429,24 @@ const Profile = () => {
           </div>
         )}
       </div>
+      
+      {/* My Video Collection */}
+      {isOwnProfile && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-white mb-4">My Video Collection</h2>
+          {purchasedVideos.length === 0 ? (
+            <div className="bg-gray-800 rounded-lg p-8 text-center">
+              <p className="text-gray-400">You haven't purchased any videos yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {purchasedVideos.map(video => (
+                <VideoCard key={video._id} video={video} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

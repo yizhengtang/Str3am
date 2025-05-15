@@ -32,16 +32,21 @@ module.exports = {
   daisyui: {
     themes: [
       {
-        dark: {
-          primary: '#4f46e5',
-          secondary: '#6366f1',
-          accent: '#818cf8',
-          neutral: '#2d2d39',
-          'base-100': '#121212',
-          'base-200': '#1e1e24',
-          'base-300': '#2d2d39',
-        },
-      },
+        cinema: {
+          primary: '#0EA5E9',    // bright accent
+          secondary: '#1E40AF',  // deep indigo
+          accent: '#22D3EE',     // cyan accent
+          neutral: '#1F2026',    // dark background
+          'base-100': '#1F2026', // darker canvas
+          'base-200': '#15171C',
+          'base-300': '#0B0E13',
+          'base-content': '#E5E7EB', // light text
+          info: '#0EA5E9',
+          success: '#10B981',
+          warning: '#FACC15',
+          error: '#F87171'
+        }
+      }
     ],
   },
 } 

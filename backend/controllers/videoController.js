@@ -137,6 +137,39 @@ exports.getVideo = async (req, res) => {
   }
 };
 
+// Get the single most viewed video
+exports.getTopVideo = async (req, res) => {
+  try {
+    const video = await Video.findOne({ isActive: true }).sort({ viewCount: -1 });
+    if (!video) {
+      return res.status(404).json({ success: false, error: 'No videos found' });
+    }
+    // On-chain token data
+    const uploaderPubkey = new PublicKey(video.uploader);
+    const [creatorTokenPDA] = await PublicKey.findProgramAddress(
+      [Buffer.from('creator_token'), uploaderPubkey.toBuffer()],
+      program.programId
+    );
+    let creatorMint = null;
+    try {
+      const creatorTokenData = await program.account.creatorToken.fetch(creatorTokenPDA);
+      creatorMint = creatorTokenData.mint.toBase58();
+    } catch {
+      // ignore if missing
+    }
+    res.status(200).json({
+      success: true,
+      data: {
+        ...video.toObject(),
+        creatorMint,
+        creatorTokenPDA: creatorTokenPDA.toBase58()
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching top video:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
 
 // Upload a new video
 exports.uploadVideo = async (req, res) => {
