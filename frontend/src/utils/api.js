@@ -4,10 +4,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 // Create axios instance
 const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  baseURL: API_URL
 });
 
 // Video APIs
@@ -45,11 +42,7 @@ export const getVideo = async (id) => {
 
 export const uploadVideo = async (formData) => {
   try {
-    const response = await api.post('/videos', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    const response = await api.post('/videos', formData);
     return response.data;
   } catch (error) {
     console.error('Error uploading video:', error);
@@ -85,6 +78,17 @@ export const getVideosByUploader = async (walletAddress, page = 1, limit = 10) =
     return response.data;
   } catch (error) {
     console.error('Error fetching videos by uploader:', error);
+    throw error;
+  }
+};
+
+// Fetch purchased videos for a viewer
+export const getPurchasedVideos = async (walletAddress) => {
+  try {
+    const response = await api.get(`/payments/access/${walletAddress}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching purchased videos:', error);
     throw error;
   }
 };
@@ -283,6 +287,28 @@ export const recordVideoView = async (videoId) => {
     return response.data;
   } catch (error) {
     console.error('Error recording video view:', error);
+    throw error;
+  }
+};
+
+// Reward channel tokens on the server side
+export const rewardChannel = async (viewer, videoId) => {
+  try {
+    const response = await api.post('/reward/watch', { viewer, videoId });
+    return response.data;
+  } catch (error) {
+    console.error('Error rewarding channel tokens:', error);
+    throw error;
+  }
+};
+
+// Fetch the most-viewed video
+export const getTopVideo = async () => {
+  try {
+    const response = await api.get('/videos/top');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching top video:', error);
     throw error;
   }
 }; 

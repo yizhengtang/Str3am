@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { toast } from 'react-toastify';
-import { updateWatchTime, recordVideoView } from '../utils/api';
-import { rewardDuringWatch } from '../utils/solana'; // Adjust if path differs
+import { updateWatchTime, recordVideoView, rewardChannel } from '../utils/api';
 
 // Threshold for earning tokens (in seconds); default 30s per token
 const REWARD_THRESHOLD_SECONDS = parseInt(process.env.REACT_APP_REWARD_THRESHOLD_SECONDS) || 30;
@@ -14,6 +13,8 @@ const VideoPlayer = ({ videoUrl, accessId, videoId, onComplete, creator, creator
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  // Track leftover seconds carried from previous videos for this channel
+  const [channelProgressSec, setChannelProgressSec] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -23,7 +24,25 @@ const VideoPlayer = ({ videoUrl, accessId, videoId, onComplete, creator, creator
   const walletAdapter = useWallet();
   const { publicKey } = walletAdapter;
 
-  
+  // Fetch existing channel progress (cumulative watchTime % threshold) for this viewer and channel
+  useEffect(() => {
+    if (!publicKey) return;
+    const fetchChannelProgress = async () => {
+      try {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/creator-token/viewer/${publicKey.toString()}`);
+        const json = await res.json();
+        if (json.success) {
+          const entry = json.data.find(e => e.creator === creator);
+          const prevProgress = entry?.progress || 0;
+          setChannelProgressSec(prevProgress * REWARD_THRESHOLD_SECONDS);
+        }
+      } catch (err) {
+        console.error('Error fetching channel tokens:', err);
+      }
+    };
+    fetchChannelProgress();
+  }, [publicKey, creator]);
+
   // Update watch time periodically
   useEffect(() => {
     if (!accessId || !publicKey || !isPlaying) return;
@@ -68,16 +87,16 @@ const VideoPlayer = ({ videoUrl, accessId, videoId, onComplete, creator, creator
         }
       }
   
-      // ✅ Reward if viewer has watched more than threshold seconds
-      if (!rewarded && video.currentTime >= REWARD_THRESHOLD_SECONDS && publicKey) {
+      // ✅ Reward when cumulative watchTime for this channel reaches threshold
+      if (!rewarded && publicKey && channelProgressSec + video.currentTime >= REWARD_THRESHOLD_SECONDS) {
         try {
-          await rewardDuringWatch(
-            walletAdapter,                   // Your Phantom or wallet adapter object
-            creator,                  // Creator's public key
-            creatorMint,              // Creator's token mint
-            creatorTokenPDA           // CreatorToken account PDA
+          await rewardChannel(
+            publicKey.toString(),         // Viewer wallet
+            videoId                       // Video ID for reward
           );
           setRewarded(true);
+          // Update leftover channel progress for next videos
+          setChannelProgressSec((channelProgressSec + video.currentTime) - REWARD_THRESHOLD_SECONDS);
           toast.success('🎉 Token rewarded for watching!');
         } catch (err) {
           console.error('Watch2Earn failed:', err);
@@ -103,6 +122,32 @@ const VideoPlayer = ({ videoUrl, accessId, videoId, onComplete, creator, creator
       if (onComplete) onComplete();
     } catch (error) {
       console.error('Error marking video as completed:', error);
+    }
+  };
+  
+  // Handle video end
+  const handleVideoEnd = async () => {
+    setIsPlaying(false);
+    // Fallback: reward if not yet rewarded and cumulative watch time reaches threshold
+    if (!rewarded && publicKey && channelProgressSec + duration >= REWARD_THRESHOLD_SECONDS) {
+      try {
+        await rewardChannel(
+          publicKey.toString(),
+          videoId
+        );
+        setRewarded(true);
+        // Update leftover channel progress for next videos
+        setChannelProgressSec((channelProgressSec + duration) - REWARD_THRESHOLD_SECONDS);
+        toast.success('🎉 Token rewarded for watching!');
+      } catch (err) {
+        console.error('Watch2Earn failed on end:', err);
+        toast.error('Token reward failed.');
+      }
+    }
+    // Ensure completion logic runs
+    if (!hasCompleted) {
+      setHasCompleted(true);
+      handleVideoCompleted();
     }
   };
   
@@ -178,7 +223,7 @@ const VideoPlayer = ({ videoUrl, accessId, videoId, onComplete, creator, creator
         onClick={handlePlayPause}
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={handleVideoEnd}
       />
       
       {/* Custom Controls */}

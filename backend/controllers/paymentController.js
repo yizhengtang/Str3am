@@ -1,5 +1,7 @@
 const { PublicKey } = require('@solana/web3.js');
-const { program } = require('../config/anchor');
+const { program, provider, BN } = require('../config/anchor');
+const CreatorToken = require('../models/CreatorToken');
+const { getAccount, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } = require('@solana/spl-token');
 const Video = require('../models/Video');
 const User = require('../models/User');
 const VideoAccess = require('../models/VideoAccess');
@@ -209,7 +211,71 @@ exports.updateWatchTime = async (req, res) => {
     }
     
     await access.save();
-    
+
+    // Reward channel tokens if threshold reached
+    (async () => {
+      try {
+        // Fetch video to identify creator
+        const video = await Video.findById(access.videoId);
+        if (!video) return;
+
+        // Get creator token entry for this channel
+        const ct = await CreatorToken.findOne({ creator: video.uploader });
+        if (!ct) return;
+
+        const creatorPubkey = new PublicKey(video.uploader);
+        const mintPubkey = new PublicKey(ct.mint);
+        const creatorTokenPda = new PublicKey(ct.creatorToken);
+
+        // Compute mint authority PDA
+        const [mintAuthorityPda] = await PublicKey.findProgramAddress(
+          [Buffer.from('mint_authority'), creatorPubkey.toBuffer()],
+          program.programId
+        );
+
+        // Compute total watch time across all videos by this creator
+        const videos = await Video.find({ uploader: video.uploader }).select('_id').lean();
+        const videoIds = videos.map(v => v._id);
+        const agg = await VideoAccess.aggregate([
+          { $match: { viewerWallet: access.viewerWallet, videoId: { $in: videoIds } } },
+          { $group: { _id: null, totalWatch: { $sum: '$watchTime' } } }
+        ]);
+        const totalWatch = agg[0]?.totalWatch || 0;
+
+        const THRESHOLD = 30; // seconds per token
+
+        // Determine current on-chain token balance
+        const viewerPubkey = new PublicKey(access.viewerWallet);
+        const ataAddress = await getAssociatedTokenAddress(mintPubkey, viewerPubkey);
+        let currentBalance = 0;
+        try {
+          const accountInfo = await getAccount(provider.connection, ataAddress);
+          currentBalance = Number(accountInfo.amount);
+        } catch {
+          currentBalance = 0;
+        }
+
+        // Calculate how many tokens to mint
+        const totalTokensShouldBe = Math.floor(totalWatch / THRESHOLD);
+        const tokensToMint = totalTokensShouldBe - currentBalance;
+        if (tokensToMint > 0) {
+          await program.methods
+            .rewardDuringWatch(new BN(tokensToMint))
+            .accounts({
+              creator: creatorPubkey,
+              creatorMint: mintPubkey,
+              viewerTokenAccount: ataAddress,
+              mintAuthority: mintAuthorityPda,
+              creatorToken: creatorTokenPda,
+              tokenProgram: TOKEN_PROGRAM_ID,
+            })
+            .rpc();
+        }
+      } catch (mintErr) {
+        console.error('Error minting channel tokens:', mintErr);
+      }
+    })();
+
     res.status(200).json({
       success: true,
       data: access
@@ -220,5 +286,21 @@ exports.updateWatchTime = async (req, res) => {
       success: false,
       error: 'Server Error'
     });
+  }
+};
+
+// List all videos purchased by a given viewer
+exports.listPurchasedVideos = async (req, res, next) => {
+  try {
+    const { walletAddress } = req.params;
+    // Find all access records for this viewer
+    const accesses = await VideoAccess.find({ viewerWallet: walletAddress }).lean();
+    const videoIds = accesses.map(a => a.videoId);
+    // Fetch video details for purchased videos
+    const videos = await Video.find({ _id: { $in: videoIds }, isActive: true });
+    res.status(200).json({ success: true, data: videos });
+  } catch (error) {
+    console.error('Error listing purchased videos:', error);
+    next(error);
   }
 }; 
