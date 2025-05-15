@@ -8,7 +8,8 @@
     "dev:backend": "nodemon backend/index.js",
     "dev:frontend": "cd frontend && npm start",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "install:all": "npm install && cd frontend && npm install"
+    "install:all": "npm install && cd frontend && npm install",
+    "build": "npm run build --prefix frontend"
   },
   "keywords": [
     "solana",
