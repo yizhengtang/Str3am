@@ -9,6 +9,7 @@
     "dev:frontend": "cd frontend && npm start",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "install:all": "npm install && cd frontend && npm install",
+    "postinstall": "npm install --prefix frontend",
     "build": "npm run build --prefix frontend"
   },
   "keywords": [
